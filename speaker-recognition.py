@@ -1,14 +1,42 @@
-"""
-../venv/bin/python speaker-recognition.py -t predict -i "~/tmp/new_album_voice_processed/13587302.wav" -m model.out
-../venv/bin/python speaker-recognition.py -t enroll -i "~/tmp/speaker/*" -m model.test.out
-"""
+#!/usr/bin/env python3
+
 import os
 import itertools
 import glob
+import argparse
 from utils import read_wav
 from interface import ModelInterface
 
-def task_enroll(input_dirs, output_model=None):
+def get_args():
+    desc = "Speaker Recognition Command Line Tool"
+    epilog = """
+Wav files in each input directory will be labeled as the basename of the directory.
+Note that wildcard inputs should be *quoted*, and they will be sent to glob.glob module.
+Examples:
+    Train (enroll a list of person named person*, and mary, with wav files under corresponding directories):
+    ./speaker-recognition.py -t enroll -i "/tmp/person* ./mary" -m model.out
+    Predict (predict the speaker of all wav files):
+    ./speaker-recognition.py -t predict -i "./*.wav" -m model.out
+"""
+    parser = argparse.ArgumentParser(description=desc,epilog=epilog,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    parser.add_argument('-t', '--task',
+                       help='Task to do. Either "enroll" or "predict"',
+                       required=True)
+
+    parser.add_argument('-i', '--input',
+                       help='Input Files(to predict) or Directories(to enroll)',
+                       required=True)
+
+    parser.add_argument('-m', '--model',
+                       help='Model file to save(in enroll) or use(in predict)',
+                       required=True)
+
+    ret = parser.parse_args()
+    return ret
+
+def task_enroll(input_dirs, output_model):
     m = ModelInterface()
     input_dirs = [os.path.expanduser(k) for k in input_dirs.strip().split()]
     dirs = itertools.chain(*(glob.glob(d) for d in input_dirs))
@@ -18,31 +46,24 @@ def task_enroll(input_dirs, output_model=None):
     if len(dirs) == 0:
         print ("No valid directory found!")
         sys.exit(1)
-    
-    dirN = 0
-    for d in dirs:
-        if dirN > 3000:
-            break
-        dirN = dirN + 1
-        label = os.path.basename(d.rstrip('/'))
-        print(str(dirN) + ":" + label)
 
+    for d in dirs:
+        label = os.path.basename(d.rstrip('/'))
         wavs = glob.glob(d + '/*.wav')
 
         if len(wavs) == 0:
-            print ("No wav file found in {0}".format(d))
+            print ("No wav file found in %s"%(d))
             continue
         for wav in wavs:
-            print(wav)
-            fs, signal = read_wav(wav)
-            print(fs)
-            m.enroll(label, fs, signal)
-            m.train()
-            m.dump("test.out")
-            #try:
-            #except Exception as e:
-            #    print(wav + " :error")
-            #    print(e)
+            try:
+                fs, signal = read_wav(wav)
+                m.enroll(label, fs, signal)
+                print("wav %s has been enrolled"%(wav))
+            except Exception as e:
+                print(wav + " error %s"%(e))
+
+        m.train()
+        m.dump(output_model)
 
 def task_predict(input_files, input_model):
     m = ModelInterface.load(input_model)
@@ -52,6 +73,11 @@ def task_predict(input_files, input_model):
         print (f, '->', label)
 
 if __name__ == "__main__":
-    task_enroll("~/tmp/speaker/*")
-    task_predict("~/tmp/new_album_voice_processed/13587302.wav", "test.out")
+    global args
+    args = get_args()
 
+    task = args.task
+    if task == 'enroll':
+        task_enroll(args.input, args.model)
+    elif task == 'predict':
+        task_predict(args.input, args.model)

@@ -7,7 +7,7 @@ class GMMSet:
 
     def __init__(self, gmm_order = 32):
         self.gmms = []
-        self.gmm_order = gmm_order # do not understand
+        self.gmm_order = gmm_order
         self.y = []
 
     def fit_new(self, x, label):
