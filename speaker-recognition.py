@@ -70,8 +70,8 @@ def task_predict(input_files, input_model):
     m = ModelInterface.load(input_model)
     for f in glob.glob(os.path.expanduser(input_files)):
         fs, signal = read_wav(f)
-        label = m.predict(fs, signal)
-        print (f, '->', label)
+        label, score = m.predict(fs, signal)
+        print (f, '->', label, ", score->", score)
 
 if __name__ == "__main__":
     global args
