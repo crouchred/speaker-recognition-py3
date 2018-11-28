@@ -1,4 +1,3 @@
-from sklearn.mixture import GMM
 from sklearn.mixture import GaussianMixture
 import operator
 import numpy as np
