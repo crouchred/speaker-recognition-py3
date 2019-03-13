@@ -63,8 +63,8 @@ def task_enroll(input_dirs, output_model):
             except Exception as e:
                 print(wav + " error %s"%(e))
 
-        m.train()
-        m.dump(output_model)
+    m.train()
+    m.dump(output_model)
 
 def task_predict(input_files, input_model):
     m = ModelInterface.load(input_model)
